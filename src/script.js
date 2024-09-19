@@ -19,13 +19,16 @@ var config = {
 var score = 0
 var scoreText
 var gameOver = false
-var leftButton, rightButton, upButton // Botones táctiles
+var collectSound // Sonido de recolección
+var bounceSound // Sonido de rebote de las bombas
+var hitSound // Sonido cuando el jugador es golpeado
 
 var game = new Phaser.Game(config)
 
 window.addEventListener('resize', resizeGame)
 
 function resizeGame() {
+  var canvas = game.canvas
   var width = window.innerWidth
   var height = window.innerHeight
 
@@ -37,16 +40,15 @@ function preload() {
   this.load.image('ground', 'assets/platform.png')
   this.load.image('star', 'assets/star.png')
   this.load.image('bomb', 'assets/bomb.png')
-
-  // Cargar imágenes de las flechas con rutas correctas
-  this.load.image('leftArrow', 'assets/controls/leftArrow.png') // Imagen de flecha izquierda
-  this.load.image('rightArrow', 'assets/controls/rightArrow.png') // Imagen de flecha derecha
-  this.load.image('upArrow', 'assets/controls/upArrow.png') // Imagen de flecha de salto
-
   this.load.spritesheet('dude', 'assets/dude.png', {
     frameWidth: 32,
     frameHeight: 48,
   })
+
+  // Cargar los sonidos
+  this.load.audio('collectSound', 'assets/audio/collect-points.mp3')
+  this.load.audio('bounceSound', 'assets/audio/springy-bounce.mp3') // Sonido de rebote de las bombas
+  this.load.audio('hitSound', 'assets/audio/male-death-sound.mp3') // Sonido cuando el jugador es golpeado
 }
 
 function create() {
@@ -99,7 +101,7 @@ function create() {
 
   stars = this.physics.add.group({
     key: 'star',
-    repeat: 19,
+    repeat: 18,
     setXY: { x: 12, y: 0, stepX: 70 },
   })
 
@@ -116,36 +118,35 @@ function create() {
   })
 
   bombs = this.physics.add.group()
-  this.physics.add.collider(bombs, platforms)
+  this.physics.add.collider(bombs, platforms, function (bomb) {
+    // Reproducir sonido de rebote cuando la bomba toque las plataformas
+    bounceSound.play()
+  })
   this.physics.add.collider(player, bombs, hitBomb, null, this)
 
-  // Crear flechas de control para dispositivos táctiles
+  // Añadir sonido de recolección
+  collectSound = this.sound.add('collectSound')
+
+  // Añadir sonido de rebote de las bombas
+  bounceSound = this.sound.add('bounceSound')
+
+  // Añadir sonido cuando el jugador es golpeado
+  hitSound = this.sound.add('hitSound')
+
   if (this.sys.game.device.input.touch) {
-    // Flecha izquierda
-    leftButton = this.add
-      .image(100, window.innerHeight - 100, 'leftArrow')
-      .setInteractive()
-      .setScale(1) // Ajusta la escala si es necesario
-    leftButton.on('pointerdown', () => player.setVelocityX(-160))
-    leftButton.on('pointerup', () => player.setVelocityX(0))
-
-    // Flecha derecha
-    rightButton = this.add
-      .image(200, window.innerHeight - 100, 'rightArrow')
-      .setInteractive()
-      .setScale(1)
-    rightButton.on('pointerdown', () => player.setVelocityX(160))
-    rightButton.on('pointerup', () => player.setVelocityX(0))
-
-    // Flecha de salto
-    upButton = this.add
-      .image(window.innerWidth - 100, window.innerHeight - 100, 'upArrow')
-      .setInteractive()
-      .setScale(1)
-    upButton.on('pointerdown', () => {
-      if (player.body.touching.down) {
-        player.setVelocityY(-330)
+    this.input.on('pointerdown', function (pointer) {
+      if (pointer.x < window.innerWidth / 2) {
+        player.setVelocityX(-160)
+        player.anims.play('left', true)
+      } else {
+        player.setVelocityX(160)
+        player.anims.play('right', true)
       }
+    })
+
+    this.input.on('pointerup', function (pointer) {
+      player.setVelocityX(0)
+      player.anims.play('turn')
     })
   }
 }
@@ -177,6 +178,9 @@ function collectStar(player, star) {
   score += 10
   scoreText.setText('Score: ' + score)
 
+  // Reproducir el sonido de recolección
+  collectSound.play()
+
   if (stars.countActive(true) === 0) {
     stars.children.iterate(function (child) {
       child.enableBody(true, child.x, 0, true, true)
@@ -195,21 +199,23 @@ function collectStar(player, star) {
 }
 
 function hitBomb(player, bombs) {
-  this.physics.pause() // Pausa la física del juego
+  this.physics.pause()
 
-  player.setTint(0xff0000) // Cambia el color del jugador a rojo
+  player.setTint(0xff0000)
 
-  player.anims.play('turn') // Muestra la animación de "quieto"
+  player.anims.play('turn')
 
-  gameOver = true // Marca el estado del juego como finalizado
+  // Reproducir el sonido cuando el jugador es golpeado
+  hitSound.play()
 
-  // Reinicia el juego automáticamente después de 2 segundos
+  gameOver = true
+
   this.time.delayedCall(
-    2000,
+    500,
     () => {
-      this.scene.restart() // Reinicia la escena
-      gameOver = false // Restablece el estado de "gameOver"
-      score = 0 // Reinicia el puntaje
+      this.scene.restart()
+      gameOver = false
+      score = 0
     },
     [],
     this
