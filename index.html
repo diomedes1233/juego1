@@ -5,9 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>mi primer juego</title>
     <style>
-        body {
+         body {
             margin: 0;
-            background: #000;
+            overflow: hidden; /* Evitar scroll */
+            background: #000; /* Fondo negro */
+        }
+        canvas {
+            display: block; /* Elimina espacio adicional */
+            position: absolute; /* Asegura que ocupe toda la pantalla */
+            top: 0;
+            left: 0;
         }
     </style>
 </head>

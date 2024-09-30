@@ -186,17 +186,21 @@ function collectStar(player, star) {
       child.enableBody(true, child.x, 0, true, true)
     })
 
-    var x =
-      player.x < 400
-        ? Phaser.Math.Between(400, 800)
-        : Phaser.Math.Between(0, 400)
+    // Crear tres bombas en posiciones aleatorias
+    for (let i = 0; i < 3; i++) {
+      var x =
+        player.x < 400
+          ? Phaser.Math.Between(400, 800)
+          : Phaser.Math.Between(0, 400)
 
-    var bomb = bombs.create(x, 16, 'bomb')
-    bomb.setBounce(1)
-    bomb.setCollideWorldBounds(true)
-    bomb.setVelocity(Phaser.Math.Between(-200, 200), 20)
+      var bomb = bombs.create(x, 16, 'bomb')
+      bomb.setBounce(1)
+      bomb.setCollideWorldBounds(true)
+      bomb.setVelocity(Phaser.Math.Between(-200, 200), 20)
+    }
   }
 }
+
 
 function hitBomb(player, bombs) {
   this.physics.pause()
